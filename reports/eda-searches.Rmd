@@ -21,6 +21,35 @@ buscas = read_csv(here::here("data/search_data.csv"))
 ```{r}
 buscas %>% 
     ggplot(aes(x = results)) + 
-    geom_histogram(binwidth = 5) 
+    geom_histogram(binwidth = 5)
 ```
 
+
+
+1-What is our daily overall clickthrough rate? How does it vary between the groups?
+
+Removendo hora e minuto da data para identificar apenas o dia.
+
+```{r}
+buscas$session_start_date <- buscas$session_start_date %>% as.Date("%d/%m/%Y")
+```
+
+Calculando a média para cada dia.
+```{r}
+buscas %>% filter(!is.na(num_clicks)) %>% 
+    group_by(session_start_date) %>%  
+    summarise(avg=median(num_clicks)) %>% 
+    ggplot(aes(x=session_start_date,y=avg))+
+    geom_bar(stat = "identity")
+
+
+
+buscas %>% filter(!is.na(num_clicks)) %>% 
+    ggplot(aes(x=as.factor(session_start_date),y=num_clicks))+
+    geom_bar(stat = "identity")
+```
+
+2-Which results do people tend to try first? How does it change day-to-day?
+3-What is our daily overall zero results rate? How does it vary between the groups?
+4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
+5-Summarize your findings in an executive summary.
