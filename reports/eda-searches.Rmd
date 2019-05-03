@@ -34,6 +34,66 @@ Removendo hora e minuto da data para identificar apenas o dia.
 buscas$session_start_date <- buscas$session_start_date %>% as.Date("%d/%m/%Y")
 ```
 
+```{r}
+buscas %>% ggplot(aes(x=session_start_date)) +
+    geom_histogram()
+```
+
+```{r}
+buscas %>%  ggplot(aes(x=session_length, y=num_clicks))+
+    geom_point()+
+    labs(title = "All data")
+
+buscas %>% filter(session_length <= 100000) %>%  ggplot(aes(x=session_length, y=num_clicks))+
+    geom_point()+
+    labs(title = "session legth < 10^5")
+
+buscas %>% filter(session_length >= 500000) %>%  ggplot(aes(x=session_length, y=num_clicks))+
+    geom_point()+
+    labs(title = "session legth > 10^5")
+```
+
+```{r}
+buscas %>% filter(num_clicks > 10) %>%  ggplot(aes(x=session_length, y=num_clicks))+
+    geom_point()+
+    labs(title = "Num clicks > 10")
+
+buscas %>% filter(num_clicks == 0) %>% summarise(qtd=n())
+buscas %>% filter(num_clicks == "NA") %>% summarise(qtd=n())
+```
+
+o ponto num clicks = 30 parece estranho, pois foram 30 páginas visitadas em 4 min.
+
+```{r}
+buscas %>% filter(first_click != "NA") %>% ggplot(aes(x=first_click))+
+    geom_histogram(binwidth = 10)
+
+buscas %>% filter(first_click > 10) %>% ggplot(aes(x=first_click))+
+    geom_histogram(binwidth = 10)
+```
+
+```{r}
+cdf <- buscas %>% filter(first_click != "NA") %>% group_by(first_click) %>% summarise(qtd = n()) %>% 
+    mutate(cumulative=cumsum(qtd)/sum(qtd))
+
+cdf %>% 
+    ggplot(aes(x=first_click,y=cumulative))+
+    geom_line()+
+    scale_y_continuous(limits=c(0, 1))
+
+```
+
+```{r}
+cdf %>% filter(cumulative <= 0.99) %>% 
+    ggplot(aes(x=first_click,y=cumulative))+
+    geom_line()
+```
+
+```{r}
+
+```
+
+
 Calculando a média para cada dia.
 ```{r}
 buscas %>% filter(!is.na(num_clicks)) %>% 
