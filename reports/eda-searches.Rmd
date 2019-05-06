@@ -20,13 +20,9 @@ buscas = read_csv(here::here("data/search_data.csv"))
 
 ```{r}
 buscas %>% 
-    ggplot(aes(x = results)) + 
-    geom_histogram(binwidth = 5)
+    ggplot(aes(x = num_clicks)) + 
+    geom_histogram(binwidth = 1)
 ```
-
-
-
-1-What is our daily overall clickthrough rate? How does it vary between the groups?
 
 Removendo hora e minuto da data para identificar apenas o dia.
 
@@ -53,23 +49,26 @@ buscas %>% filter(session_length >= 500000) %>%  ggplot(aes(x=session_length, y=
     labs(title = "session legth > 10^5")
 ```
 
+
 ```{r}
 buscas %>% filter(num_clicks > 10) %>%  ggplot(aes(x=session_length, y=num_clicks))+
     geom_point()+
     labs(title = "Num clicks > 10")
 
-buscas %>% filter(num_clicks == 0) %>% summarise(qtd=n())
-buscas %>% filter(num_clicks == "NA") %>% summarise(qtd=n())
+buscas %>% filter(num_clicks == 0) %>% summarise(qtd=n()) / buscas %>% filter(num_clicks >= 0) %>% summarise(qtd=n())
 ```
 
 o ponto num clicks = 30 parece estranho, pois foram 30 páginas visitadas em 4 min.
+
+75% das pesquisas não tiveram clicks em nenhum dos seus resultados.
 
 ```{r}
 buscas %>% filter(first_click != "NA") %>% ggplot(aes(x=first_click))+
     geom_histogram(binwidth = 10)
 
-buscas %>% filter(first_click > 10) %>% ggplot(aes(x=first_click))+
-    geom_histogram(binwidth = 10)
+buscas %>% filter(first_click >= 0 & first_click <= 10) %>% 
+    ggplot(aes(x=first_click))+
+    geom_histogram()
 ```
 
 ```{r}
@@ -95,25 +94,37 @@ sumario <- buscas %>% group_by(session_id) %>% summarise(length = mean(session_l
 sumario %>% filter(length > 0) %>% 
     ggplot(aes(x=length, y=clicks))+
     geom_point()
+
+buscas %>% group_by(session_id) %>% summarise(qtd=n()) %>% 
+    ggplot(aes(x="QTD", y=qtd))+
+    geom_boxplot()
 ```
 
+1-What is our daily overall clickthrough rate? How does it vary between the groups?
 
 Calculando a média para cada dia.
 ```{r}
 buscas %>% filter(!is.na(num_clicks)) %>% 
     group_by(session_start_date) %>%  
-    summarise(avg=median(num_clicks)) %>% 
-    ggplot(aes(x=session_start_date,y=avg))+
+    summarise(mean=mean(num_clicks)) %>% 
+    ggplot(aes(x=session_start_date,y=mean))+
     geom_bar(stat = "identity")
-
 
 
 buscas %>% filter(!is.na(num_clicks)) %>% 
-    ggplot(aes(x=as.factor(session_start_date),y=num_clicks))+
+    group_by(session_start_date) %>%  
+    summarise(vary=var(num_clicks)) %>% 
+    ggplot(aes(x=session_start_date,y=vary))+
     geom_bar(stat = "identity")
 ```
 
+A maioria das buscas não possuem clicks, isso vale para todos os dias.
+
+
 2-Which results do people tend to try first? How does it change day-to-day?
+
+
+
 3-What is our daily overall zero results rate? How does it vary between the groups?
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
 5-Summarize your findings in an executive summary.
