@@ -105,26 +105,72 @@ buscas %>% group_by(session_id) %>% summarise(qtd=n()) %>%
 Calculando a média para cada dia.
 ```{r}
 buscas %>% filter(!is.na(num_clicks)) %>% 
-    group_by(session_start_date) %>%  
-    summarise(mean=mean(num_clicks)) %>% 
-    ggplot(aes(x=session_start_date,y=mean))+
+    group_by(group) %>%  
+    summarise(mean=median(num_clicks)) %>% 
+    ggplot(aes(x=group,y=mean))+
     geom_bar(stat = "identity")
 
 
 buscas %>% filter(!is.na(num_clicks)) %>% 
-    group_by(session_start_date) %>%  
+    group_by(group) %>%  
     summarise(vary=var(num_clicks)) %>% 
-    ggplot(aes(x=session_start_date,y=vary))+
+    ggplot(aes(x=group,y=vary))+
     geom_bar(stat = "identity")
+
+buscas %>% filter(num_clicks != "NA") %>% 
+    group_by(session_start_date) %>%  
+    ggplot(aes(x="Num clicks", y=num_clicks))+
+    geom_boxplot()+
+    facet_wrap(~group)
 ```
 
-A maioria das buscas não possuem clicks, isso vale para todos os dias.
+A maioria das buscas, em ambos os grupos, não possuem clicks, porém o grupo 'a' possui um range bem maior do que o grupo 'b'.
 
 
 2-Which results do people tend to try first? How does it change day-to-day?
 
+```{r}
+buscas %>% filter(first_click != "NA") %>% 
+    group_by(first_click) %>% 
+    summarise(qtd=n()) %>% 
+    filter(qtd >= 10) %>% 
+    ggplot(aes(x=as.factor(first_click),y=qtd))+
+    geom_bar(stat = "identity")
+
+buscas %>% filter(first_click != "NA") %>% 
+    group_by(first_click, session_start_date) %>% 
+    summarise(qtd=n()) %>% 
+    filter(qtd >= 10) %>% 
+    ggplot(aes(x=as.factor(first_click),y=qtd))+
+    geom_bar(stat = "identity")+
+    theme(axis.text.x = element_text(angle = 45))+
+    facet_wrap(~session_start_date, ncol = 2)
+```
 
 
 3-What is our daily overall zero results rate? How does it vary between the groups?
+
+```{r}
+buscas %>% filter(results == 0) %>% 
+    group_by(session_start_date) %>% 
+    summarise(qtd=n()) %>% 
+    ggplot(aes(x=session_start_date, y =qtd))+
+    geom_point()
+
+buscas %>% filter(results == 0) %>% 
+    group_by(session_start_date, group) %>% 
+    summarise(qtd=n()) %>% 
+    ggplot(aes(x=session_start_date, y=qtd, colour=group))+
+    geom_point()
+
+```
+
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
-5-Summarize your findings in an executive summary.
+
+```{r}
+buscas %>% ggplot(aes(x=session_length,y=num_clicks))+
+    geom_point()
+
+cor(buscas$session_length,buscas$num_clicks, method)
+```
+
