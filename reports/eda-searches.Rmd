@@ -90,7 +90,11 @@ cdf %>% filter(cumulative <= 0.99) %>%
 ```
 
 ```{r}
+sumario <- buscas %>% group_by(session_id) %>% summarise(length = mean(session_length), clicks = mean(num_clicks))
 
+sumario %>% filter(length > 0) %>% 
+    ggplot(aes(x=length, y=clicks))+
+    geom_point()
 ```
 
 
