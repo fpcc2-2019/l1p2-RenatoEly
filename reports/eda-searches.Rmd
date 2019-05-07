@@ -168,9 +168,11 @@ buscas %>% filter(results == 0) %>%
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
 
 ```{r}
-buscas %>% ggplot(aes(x=session_length,y=num_clicks))+
+buscas %>% filter(session_length < 100000 & group=="a") %>% 
+    ggplot(aes(y=session_length,x=session_start_timestamp))+
     geom_point()
 
-cor(buscas$session_length,buscas$num_clicks, method)
+buscas %>% filter(first_click!="NA" & session_length < 100000 & group=="a") %>% 
+    select(first_click,session_length,session_start_timestamp,results,num_clicks) %>% cor(method = "spearman")
 ```
 
