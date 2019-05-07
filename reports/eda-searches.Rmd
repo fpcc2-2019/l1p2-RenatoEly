@@ -145,6 +145,23 @@ buscas %>% filter(first_click != "NA") %>%
     geom_bar(stat = "identity")+
     theme(axis.text.x = element_text(angle = 45))+
     facet_wrap(~session_start_date, ncol = 2)
+
+cdf_Date <- buscas %>% filter(first_click != "NA") %>% group_by(session_start_date, first_click) %>% summarise(qtd = n()) %>% 
+    mutate(cumulative=cumsum(qtd)/sum(qtd))
+
+cdf_Date %>% 
+    filter(cumulative <= 0.95) %>% 
+    ggplot(aes(x=first_click,y=cumulative))+
+    geom_line()+
+    #scale_y_continuous(limits=c(0, 1))+
+    facet_wrap(~session_start_date)
+
+cdf_Date %>% 
+    filter(first_click > 3) %>% 
+    ggplot(aes(x=first_click,y=1-cumulative))+
+    geom_line()+
+    #scale_y_continuous(limits=c(0, 1))+
+    facet_wrap(~session_start_date)
 ```
 
 
@@ -160,19 +177,28 @@ buscas %>% filter(results == 0) %>%
 buscas %>% filter(results == 0) %>% 
     group_by(session_start_date, group) %>% 
     summarise(qtd=n()) %>% 
-    ggplot(aes(x=session_start_date, y=qtd, colour=group))+
-    geom_point()
+    ggplot(aes(x=session_start_date, y=qtd, fill=group, color=group))+
+    geom_bar(stat = "identity")+
+    geom_line()+
+    labs(x="Dia da sessão", y="Qtd. de 0 resultados")
 
 ```
 
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
 
 ```{r}
-buscas %>% filter(session_length < 100000 & group=="a") %>% 
-    ggplot(aes(y=session_length,x=session_start_timestamp))+
+buscas %>% filter(session_length < 100000 & group=="a" & session_start_date=="2016-03-04" & first_click>=1) %>% 
+    ggplot(aes(y=session_length,x=first_click))+
     geom_point()
 
-buscas %>% filter(first_click!="NA" & session_length < 100000 & group=="a") %>% 
-    select(first_click,session_length,session_start_timestamp,results,num_clicks) %>% cor(method = "spearman")
+buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks) %>% 
+    log() %>% 
+    filter(first_click > 0 & num_clicks > 0) %>% 
+    pairs()
+
+buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks) %>%
+    filter(first_click > 0 & num_clicks > 0) %>% 
+    log() %>% 
+    cor(method = "spearman")
 ```
 
