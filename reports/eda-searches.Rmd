@@ -157,7 +157,7 @@ cdf_Date %>%
     facet_wrap(~session_start_date)
 
 cdf_Date %>% 
-    filter(first_click > 3) %>% 
+    filter(first_click >= 3) %>% 
     ggplot(aes(x=first_click,y=1-cumulative))+
     geom_line()+
     #scale_y_continuous(limits=c(0, 1))+
@@ -177,9 +177,8 @@ buscas %>% filter(results == 0) %>%
 buscas %>% filter(results == 0) %>% 
     group_by(session_start_date, group) %>% 
     summarise(qtd=n()) %>% 
-    ggplot(aes(x=session_start_date, y=qtd, fill=group, color=group))+
-    geom_bar(stat = "identity")+
-    geom_line()+
+    ggplot(aes(x=session_start_date, y=qtd, fill=group))+
+    geom_bar(stat = "identity", position = "dodge")+
     labs(x="Dia da sessão", y="Qtd. de 0 resultados")
 
 ```
@@ -191,7 +190,7 @@ buscas %>% filter(session_length < 100000 & group=="a" & session_start_date=="20
     ggplot(aes(y=session_length,x=first_click))+
     geom_point()
 
-buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks) %>% 
+buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks, search_index) %>% 
     log() %>% 
     filter(first_click > 0 & num_clicks > 0) %>% 
     pairs()
@@ -200,5 +199,14 @@ buscas %>% select(first_click,session_length,session_start_timestamp,results,num
     filter(first_click > 0 & num_clicks > 0) %>% 
     log() %>% 
     cor(method = "spearman")
+```
+
+```{r}
+teste <- buscas %>% group_by(search_index) %>% 
+    summarise(overall_length=mean(session_length))
+    
+pairs(teste)
+
+cor(teste)
 ```
 
