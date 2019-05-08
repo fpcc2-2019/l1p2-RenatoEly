@@ -183,6 +183,8 @@ buscas %>% filter(results == 0) %>%
 
 ```
 
+É possível observar que o grupo 'a' possui uma variação maior que o grupo 'b', bem como uma participação maior na quantidade total de zero resultados.
+
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
 
 ```{r}
@@ -195,18 +197,40 @@ buscas %>% select(first_click,session_length,session_start_timestamp,results,num
     filter(first_click > 0 & num_clicks > 0) %>% 
     pairs()
 
-buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks) %>%
-    filter(first_click > 0 & num_clicks > 0) %>% 
-    log() %>% 
+buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks,search_index) %>%
+    filter(first_click > 0 & num_clicks > 0) %>%
+    log() %>%
     cor(method = "spearman")
 ```
 
+
 ```{r}
-teste <- buscas %>% group_by(search_index) %>% 
-    summarise(overall_length=mean(session_length))
-    
+teste <- buscas %>% group_by(first_click) %>% 
+    summarise(overall_length=median(session_length))
+
 pairs(teste)
 
 cor(teste)
+
+buscas %>% group_by(session_id) %>% 
+    summarise(qtd_search_in_session=max(search_index)) %>% 
+    group_by(qtd_search_in_session) %>% 
+    summarise(qtd_session_in_search=n()) %>% 
+    mutate(cumulative=cumsum(qtd_session_in_search)/sum(qtd_session_in_search)) %>% 
+    filter(cumulative <= 0.99) %>% 
+    ggplot(aes(x=qtd_search_in_session, y=cumulative))+
+    geom_line()
+
+buscas %>% group_by(session_id) %>% 
+    filter(n()>1) %>% 
+    summarise(vary=var(session_length)) %>% 
+    filter(vary>0)
+
+
+teste <- buscas %>% group_by(session_id) %>% 
+    mutate(search_length=lead(session_start_timestamp,1) - session_start_timestamp)
+
+teste[is.na(teste$search_length) & teste$search_index == 1,"search_length"] <- teste[is.na(teste$search_length) & teste$search_index == 1, "session_length"]
+
 ```
 
