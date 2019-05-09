@@ -1,6 +1,8 @@
 ---
 title: "EDA buscas"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 O objeto principal da análise são as buscas e a navegação depois da busca. Criamos esses dados a partir dos dados originais da wikimedia em `/data/search_data.csv`. 
@@ -18,134 +20,133 @@ theme_set(theme_bw())
 buscas = read_csv(here::here("data/search_data.csv"))
 ```
 
-```{r}
+```{r echo=FALSE}
 buscas %>% 
     ggplot(aes(x = num_clicks)) + 
-    geom_histogram(binwidth = 1)
+    geom_histogram(binwidth = 1)+
+    labs(x="Nº de clicks", y="Ocorrência")
 ```
 
 Removendo hora e minuto da data para identificar apenas o dia.
 
-```{r}
+```{r echo=FALSE}
 buscas$session_start_date <- buscas$session_start_date %>% as.Date("%d/%m/%Y")
 ```
 
-```{r}
+```{r echo=FALSE}
 buscas %>% ggplot(aes(x=session_start_date)) +
-    geom_histogram()
+    geom_histogram()+
+    labs(x="Dia da sessão", y="Qtd. pesquisas")
 ```
 
-```{r}
+```{r echo=FALSE}
 buscas %>%  ggplot(aes(x=session_length, y=num_clicks))+
     geom_point()+
-    labs(title = "All data")
-
-buscas %>% filter(session_length <= 100000) %>%  ggplot(aes(x=session_length, y=num_clicks))+
-    geom_point()+
-    labs(title = "session legth < 10^5")
-
-buscas %>% filter(session_length >= 500000) %>%  ggplot(aes(x=session_length, y=num_clicks))+
-    geom_point()+
-    labs(title = "session legth > 10^5")
+    labs(x="Duração da sessão",y="Nº de clicks")
 ```
 
+Existem algumas sessões com tamanhos muito grandes, que se destacam bastante das demais. Essas sessões, com tamanho > 100 mil segundos, serão removidas da análise
 
-```{r}
-buscas %>% filter(num_clicks > 10) %>%  ggplot(aes(x=session_length, y=num_clicks))+
-    geom_point()+
-    labs(title = "Num clicks > 10")
-
-buscas %>% filter(num_clicks == 0) %>% summarise(qtd=n()) / buscas %>% filter(num_clicks >= 0) %>% summarise(qtd=n())
+```{r echo=FALSE}
+buscas <- buscas %>% filter(session_length <= 100000)
 ```
 
-o ponto num clicks = 30 parece estranho, pois foram 30 páginas visitadas em 4 min.
+```{r echo=FALSE}
+buscas %>% filter(num_clicks == 0) %>% summarise(qtd=n()) / buscas %>%  summarise(qtd=n())
+```
 
-75% das pesquisas não tiveram clicks em nenhum dos seus resultados.
+Mias de 75% das pesquisas não tiveram clicks em nenhum dos seus resultados.
 
-```{r}
+```{r echo=FALSE}
 buscas %>% filter(first_click != "NA") %>% ggplot(aes(x=first_click))+
-    geom_histogram(binwidth = 10)
+    geom_histogram(binwidth = 10)+
+    labs(x="Primeiro click", y="Ocorrência")
 
 buscas %>% filter(first_click >= 0 & first_click <= 10) %>% 
     ggplot(aes(x=first_click))+
-    geom_histogram()
+    geom_histogram()+
+    labs(x="Primeiro click", y="Ocorrência")
 ```
 
-```{r}
+Como esperado, a maior concentração de click está no primeiro link.
+
+```{r echo=FALSE}
 cdf <- buscas %>% filter(first_click != "NA") %>% group_by(first_click) %>% summarise(qtd = n()) %>% 
     mutate(cumulative=cumsum(qtd)/sum(qtd))
 
-cdf %>% 
+cdf %>% filter(cumulative <= 0.9) %>% 
     ggplot(aes(x=first_click,y=cumulative))+
     geom_line()+
-    scale_y_continuous(limits=c(0, 1))
-
+    labs(x="Primeiro click", y="Proporção acumulada")
 ```
-
-```{r}
-cdf %>% filter(cumulative <= 0.99) %>% 
-    ggplot(aes(x=first_click,y=cumulative))+
-    geom_line()
-```
-
-```{r}
-sumario <- buscas %>% group_by(session_id) %>% summarise(length = mean(session_length), clicks = mean(num_clicks))
-
-sumario %>% filter(length > 0) %>% 
-    ggplot(aes(x=length, y=clicks))+
-    geom_point()
-
-buscas %>% group_by(session_id) %>% summarise(qtd=n()) %>% 
-    ggplot(aes(x="QTD", y=qtd))+
-    geom_boxplot()
-```
+ 
+ Ao observarmos a densidade acumulada para a variável "first_click" percebemos que quase 90% das pesquisas que tiveram algum click, o primeiro click foi em um dos 4 primeiros resultados.
 
 1-What is our daily overall clickthrough rate? How does it vary between the groups?
 
-Calculando a média para cada dia.
-```{r}
+```{r echo=FALSE}
+buscas %>% group_by(session_start_date) %>% 
+    summarise(click_mean=median(num_clicks)) %>% 
+    ggplot(aes(x=session_start_date,y=click_mean))+
+    geom_line()+
+    labs(x="Ddata da sessão", y="Mediana")
+
 buscas %>% filter(!is.na(num_clicks)) %>% 
     group_by(group) %>%  
     summarise(mean=median(num_clicks)) %>% 
     ggplot(aes(x=group,y=mean))+
-    geom_bar(stat = "identity")
+    geom_bar(stat = "identity")+
+    labs(x="Grupo", y="Mediana")
 
 
 buscas %>% filter(!is.na(num_clicks)) %>% 
     group_by(group) %>%  
     summarise(vary=var(num_clicks)) %>% 
     ggplot(aes(x=group,y=vary))+
-    geom_bar(stat = "identity")
+    geom_bar(stat = "identity")+
+    labs(x="Grupo", y="Variância")
 
 buscas %>% filter(num_clicks != "NA") %>% 
     group_by(session_start_date) %>%  
-    ggplot(aes(x="Num clicks", y=num_clicks))+
+    ggplot(aes(x="", y=num_clicks))+
     geom_boxplot()+
-    facet_wrap(~group)
+    facet_wrap(~group)+
+    labs(x="Grupo", y="Nº de clicks")
 ```
 
-A maioria das buscas, em ambos os grupos, não possuem clicks, porém o grupo 'a' possui um range bem maior do que o grupo 'b'.
+A mediana para da quantidade de clicks para qualquer dia e qualquer grupo é sempre zero, como já era esperado pelo fato de 75% das pesquisas não possuirem clicks, porém ao observarmos a variação nos dados, percebemos que os dados do grupo 'a' possuem um range maior queo grupo 'b'. Isso se mostra por uma variância mais alta na quantidade de cliks em pesquisas do grupo 'a' e no seu boxplot, apresentando uma caixa perceptível e com outliers mais altos se comparado com o boxplot do grupo 'b' onde a caixa é apenas uma linha na marcação zero e com outliers bem baixos.
 
 
 2-Which results do people tend to try first? How does it change day-to-day?
 
-```{r}
+```{r echo=FALSE}
 buscas %>% filter(first_click != "NA") %>% 
     group_by(first_click) %>% 
     summarise(qtd=n()) %>% 
     filter(qtd >= 10) %>% 
     ggplot(aes(x=as.factor(first_click),y=qtd))+
-    geom_bar(stat = "identity")
+    geom_bar(stat = "identity")+
+    labs(x="Primeiro click", y="Ocorrência")
+```
 
+Como esperado as pessoas tendem a clickar nos primeiros links.
+
+
+```{r echo=FALSE}
 buscas %>% filter(first_click != "NA") %>% 
     group_by(first_click, session_start_date) %>% 
     summarise(qtd=n()) %>% 
     filter(qtd >= 10) %>% 
     ggplot(aes(x=as.factor(first_click),y=qtd))+
     geom_bar(stat = "identity")+
+    labs(y="Ocorrências", x="Primeiro click")+
     theme(axis.text.x = element_text(angle = 45))+
     facet_wrap(~session_start_date, ncol = 2)
+```
 
+Ao separarmos os dados por dia, é notória a semelhança no comportamento dos usuários mesmo em dias diferentes.
+
+```{r echo=FALSE}
 cdf_Date <- buscas %>% filter(first_click != "NA") %>% group_by(session_start_date, first_click) %>% summarise(qtd = n()) %>% 
     mutate(cumulative=cumsum(qtd)/sum(qtd))
 
@@ -154,25 +155,21 @@ cdf_Date %>%
     ggplot(aes(x=first_click,y=cumulative))+
     geom_line()+
     #scale_y_continuous(limits=c(0, 1))+
-    facet_wrap(~session_start_date)
-
-cdf_Date %>% 
-    filter(first_click >= 3) %>% 
-    ggplot(aes(x=first_click,y=1-cumulative))+
-    geom_line()+
-    #scale_y_continuous(limits=c(0, 1))+
+    labs(x="Primeiro click", y="Proporção acumulada")+
     facet_wrap(~session_start_date)
 ```
 
+Ao observar a densidade acumulada dos primeiros clicks e fixando a proporção em 95%, o comportamento ainda é bastante semelhante entre os dias, porém agora o dia 04 de março se distaca, pois é o único dia em que 95% dos primeiros clicks estão entre os 11 primeiros resultados, formando uma ponta mais a direita do que os outros dias.
 
 3-What is our daily overall zero results rate? How does it vary between the groups?
 
-```{r}
+```{r echo=FALSE}
 buscas %>% filter(results == 0) %>% 
     group_by(session_start_date) %>% 
     summarise(qtd=n()) %>% 
     ggplot(aes(x=session_start_date, y =qtd))+
-    geom_point()
+    geom_bar(stat="identity")+
+    labs(x="Dia da sessão", y="Qtd. de 0 resultados")
 
 buscas %>% filter(results == 0) %>% 
     group_by(session_start_date, group) %>% 
@@ -183,15 +180,11 @@ buscas %>% filter(results == 0) %>%
 
 ```
 
-É possível observar que o grupo 'a' possui uma variação maior que o grupo 'b', bem como uma participação maior na quantidade total de zero resultados.
+É possível observar que o grupo 'a' possui uma variação maior que o grupo 'b', bem como uma participação maior na quantidade total de pesquisas que não retornam qualquer resultado.
 
 4-Let session length be approximately the time between the first event and the last event in a session. Choose a variable from the dataset and describe its relationship to session length. Visualize the relationship.
 
-```{r}
-buscas %>% filter(session_length < 100000 & group=="a" & session_start_date=="2016-03-04" & first_click>=1) %>% 
-    ggplot(aes(y=session_length,x=first_click))+
-    geom_point()
-
+```{r echo=FALSE}
 buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks, search_index) %>% 
     log() %>% 
     filter(first_click > 0 & num_clicks > 0) %>% 
@@ -200,37 +193,9 @@ buscas %>% select(first_click,session_length,session_start_timestamp,results,num
 buscas %>% select(first_click,session_length,session_start_timestamp,results,num_clicks,search_index) %>%
     filter(first_click > 0 & num_clicks > 0) %>%
     log() %>%
-    cor(method = "spearman")
+    cor()
 ```
 
+Olhando para os gráficos de disperção e para a tabela de correlações a única variável que o tamanho da sessão possui um nível de correlação considerável, 0.45, é 'search_index', o que já era esperado, pois as sessões que possuem mais pesquisas normalmente duram mais.
 
-```{r}
-teste <- buscas %>% group_by(first_click) %>% 
-    summarise(overall_length=median(session_length))
-
-pairs(teste)
-
-cor(teste)
-
-buscas %>% group_by(session_id) %>% 
-    summarise(qtd_search_in_session=max(search_index)) %>% 
-    group_by(qtd_search_in_session) %>% 
-    summarise(qtd_session_in_search=n()) %>% 
-    mutate(cumulative=cumsum(qtd_session_in_search)/sum(qtd_session_in_search)) %>% 
-    filter(cumulative <= 0.99) %>% 
-    ggplot(aes(x=qtd_search_in_session, y=cumulative))+
-    geom_line()
-
-buscas %>% group_by(session_id) %>% 
-    filter(n()>1) %>% 
-    summarise(vary=var(session_length)) %>% 
-    filter(vary>0)
-
-
-teste <- buscas %>% group_by(session_id) %>% 
-    mutate(search_length=lead(session_start_timestamp,1) - session_start_timestamp)
-
-teste[is.na(teste$search_length) & teste$search_index == 1,"search_length"] <- teste[is.na(teste$search_length) & teste$search_index == 1, "session_length"]
-
-```
-
+###Renato Ely
